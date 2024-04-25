@@ -9,8 +9,8 @@ It works with the 7 different masks of the QR-Protocol, and has 4 encoding metho
 * UTF-16 - All characters, <span style="color: red; font-size: 90%;">this encoding method, doesn't work with common phones' scanners, because they don't support UTF-16 in QR-Protocol.</span>
 
 <div>
-  <img src="Images/Image1.png"/>
-  <img src="Images/Image2.png"/>
-  <img src="Images/Image3.png"/>
-  <img src="Images/Image4.png"/>
+  <img src="Images/Image1.png" style="width: 47%; padding: 1%;"/>
+  <img src="Images/Image2.png" style="width: 47%; padding: 1%;"/>
+  <img src="Images/Image3.png" style="width: 47%; padding: 1%;"/>
+  <img src="Images/Image4.png" style="width: 47%; padding: 1%;"/>
 </div>
