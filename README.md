@@ -2,7 +2,7 @@
 <h2>This Project is a QR-Code generator</h2>
 
 This QR-Code generator can generate the 40 versions of the QR-Protocol.
-It works with the 7 different masks of the QR-Protocol, and has 4 encoding methods:
+It works with the 8 different masks of the QR-Protocol, and has 4 encoding methods:
 * <b>Numeric</b> - Only digits [0-9]
 * <b>Alphanumeric</b> - Only digits & Upper-Case English letters [0-9 A-Z]
 * <b>Byte</b> - The ASCII table (including English letters, digits, common characters, etc. )
