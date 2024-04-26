@@ -764,8 +764,8 @@ namespace QR_code
 
                 // rx -= factor * gx
                 int factor = rx[d_rx];
-                d_rx -= 10;
-                for (int i = 0; i <= 10; i++)
+                d_rx -= d_gx;
+                for (int i = 0; i <= d_gx; i++)
                     if ((gx >> i & 1) != 0)
                         rx[i + d_rx] -= factor;
             }
@@ -916,8 +916,7 @@ namespace QR_code
         {
             UpdateQR();
         }
-
-        
+ 
         private void Expand_TextBox(object sender, EventArgs e)
         {
             if ((sender as Label).Text == "\x21f2") // Expand
