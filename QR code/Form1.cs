@@ -740,42 +740,68 @@ namespace QR_code
 
         /// <summary>
         /// Calculate the (a,b)BCH code in respect to gx;
+        /// </br>
+        /// Notice: gx, rx max degree is 31
         /// </summary>
         int BCH(int gx, int data, int a, int b)
         {
             int d_gx = 31;
-            for (; d_gx >= 0 && (gx >> d_gx & 1) == 0; d_gx--) ; // Find the maximum degree of rx
+            for (; d_gx >= 0 && (gx >> d_gx & 1) == 0; d_gx--) ; // Find the maximum degree of gx
 
             // Create px
             data <<= d_gx;
-            List<int> px = new List<int>(a);
+            int px = 0;
             for (int i = 0; i < a; i++)
-                px.Add((data >> i) & 1);
+                px |= (data >> i & 1) << i;
 
-            // Calculate rx [ rx = px % gx ]
-            List<int> rx = new List<int>(px);
+            // Calculate rx [ rx = px % gx mod 2 ]
+            int rx = px;
             while (true)
             {
                 // find rx degree
                 int d_rx = a - 1;
-                for (; d_rx >= d_gx && rx[d_rx] == 0; d_rx--) ; // Find the maximum degree of rx
+                for (; d_rx >= d_gx && (rx >> d_rx & 1) == 0; d_rx--) ; // Find the maximum degree of rx
                 if (d_rx < d_gx)
                     break;
 
-                // rx -= factor * gx
-                int factor = rx[d_rx];
-                d_rx -= d_gx;
-                for (int i = 0; i <= d_gx; i++)
-                    if ((gx >> i & 1) != 0)
-                        rx[i + d_rx] -= factor;
+                rx ^= gx << (d_rx - d_gx); // rx -= gx << d mod 2
             }
 
-            // Copy [ px - rx ] to result (odd coefficient is 1, even is 0)
-            int res = 0;
-            for (int i = 14; i >= 0; i--)
-                res = res * 2 + ((px[i] - rx[i]) & 1);
+            // Return [ px - rx mod 2 ]
+            return px ^ rx;
 
-            return res;
+
+            //// The previous code - slow, the new one is faster.
+            //// Create px
+            //data <<= d_gx;
+            //List<int> px = new List<int>(a);
+            //for (int i = 0; i < a; i++)
+            //    px.Add((data >> i) & 1);
+
+            //// Calculate rx [ rx = px % gx ]
+            //List<int> rx = new List<int>(px);
+            //while (true)
+            //{
+            //    // find rx degree
+            //    int d_rx = a - 1;
+            //    for (; d_rx >= d_gx && rx[d_rx] == 0; d_rx--) ; // Find the maximum degree of rx
+            //    if (d_rx < d_gx)
+            //        break;
+
+            //    // rx -= factor * gx
+            //    int factor = rx[d_rx];
+            //    d_rx -= d_gx;
+            //    for (int i = 0; i <= d_gx; i++)
+            //        if ((gx >> i & 1) != 0)
+            //            rx[i + d_rx] -= factor;
+            //}
+
+            //// Copy [ px - rx ] to result (odd coefficient is 1, even is 0)
+            //int res = 0;
+            //for (int i = 14; i >= 0; i--)
+            //    res = res * 2 + ((px[i] - rx[i]) & 1);
+
+            //return res;
         }
 
         int GetFormatErrorCorrection(int format)
