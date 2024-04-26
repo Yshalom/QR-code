@@ -740,10 +740,9 @@ namespace QR_code
 
         /// <summary>
         /// Calculate the (a,b)BCH code in respect to gx;
-        /// </br>
-        /// Notice: gx, rx max degree is 31
+        /// Notice: gx, max degree is 31 and 0 < a,b < 32
         /// </summary>
-        int BCH(int gx, int data, int a, int b)
+        int BCH(int gx, int data, int a)
         {
             int d_gx = 31;
             for (; d_gx >= 0 && (gx >> d_gx & 1) == 0; d_gx--) ; // Find the maximum degree of gx
@@ -806,12 +805,12 @@ namespace QR_code
 
         int GetFormatErrorCorrection(int format)
         {
-            return BCH(0b10100110111, format, 15, 5);
+            return BCH(0b10100110111, format, 15); // (15,5)BCH
         }
 
         int GetVersionErrorCorrection(int version)
         {
-            return BCH(0b1111100100101, version, 18, 6);
+            return BCH(0b1111100100101, version, 18); // (18,6)BCH
         }
 
         void AddFormat(ref bool[,] m, Mask mask, ECL ecl)
