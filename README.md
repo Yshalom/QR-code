@@ -6,7 +6,8 @@ It works with the 8 different masks of the QR-Protocol, and has 4 encoding metho
 * <b>Numeric</b> - Only digits [0-9]
 * <b>Alphanumeric</b> - Only digits & Upper-Case English letters [0-9A-Z $%*+-./:]
 * <b>Byte</b> - The ASCII table (including English letters, digits, common characters, etc. )
-* <b>UTF-16</b> - All characters, - ![#f03c15](this encoding method, doesn't work with common phones' scanners, because they don't support UTF-16 in QR-Protocol). `#f03c15`
+* <b>UTF-16</b> - All characters,
+- ![#f03c15](this encoding method, doesn't work with common phones' scanners, because they don't support UTF-16 in QR-Protocol). `#f03c15`
 </p>
 
 <div>
