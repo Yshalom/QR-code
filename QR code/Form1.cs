@@ -376,7 +376,7 @@ namespace QR_code
             return (byte)z;
         }
 
-        List<byte> ReedSolomonComputeRemainder(List<byte> data, List<byte> divisor)
+        List<byte> ReedSolomonAlgorithm(List<byte> data, List<byte> divisor)
         {
             LinkedList<byte> result = new LinkedList<byte>();
             for (int i = 0; i < divisor.Count; i++)
@@ -415,7 +415,7 @@ namespace QR_code
                 for (int j = 0; j < blocksData[i].Capacity; j++)
                     blocksData[i].Add(data.GetByte(dataIndex++));
 
-                blocksEC[i] = ReedSolomonComputeRemainder(blocksData[i], RSdiv);
+                blocksEC[i] = ReedSolomonAlgorithm(blocksData[i], RSdiv);
             }
 
             //  Return the data + the error-corraction
