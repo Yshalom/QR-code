@@ -928,7 +928,7 @@ namespace QR_code
                         G.FillRectangle(black, i * ratio, j * ratio, ratio, ratio);
                 }
             G.Dispose();
-            labelVersion.Text = $"Versoin {version}";
+            labelVersion.Text = $"Version {version}";
             pictureBox.Refresh();
         }
 
