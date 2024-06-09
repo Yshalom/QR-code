@@ -694,6 +694,13 @@ namespace QR_code
         // Get a matrix of QR code, choose a mask & add it to the matrix
         Mask AddMask(int version, ref bool[,] m, Mask mask)
         {
+            // Those 2 variables are used for choosing an Automat mask
+            int[] OneCount = new int[8];
+            int TotalCount = 0;
+            for (int i = 0; i < 8; i++)
+                OneCount[i] = 0;
+
+
             byte[] alignmentPos = Alignment_position[version];
 
             int size = m.GetLength(0);
@@ -706,6 +713,18 @@ namespace QR_code
                         switch (mask)
                         {
                             case Mask.Automat:
+                            {
+                                TotalCount++;
+                                OneCount[(int)Mask.flower] += (i * j % 2 + i * j % 3) ^ 1;
+                                OneCount[(int)Mask.rectangles] += ((i / 2 + j / 3) % 2) ^ 1;
+                                OneCount[(int)Mask.Pazzle] += ((i * j % 3 + i + j) % 2) ^ 1;
+                                OneCount[(int)Mask.XoredRectangles] += ((i * j % 3 + i * j) % 2) ^ 1;
+                                OneCount[(int)Mask.row2] += (i % 2) ^ 1;
+                                OneCount[(int)Mask.checkers] += ((i + j) % 2) ^ 1;
+                                OneCount[(int)Mask.diagonal3] += ((i + j) % 3) ^ 1;
+                                OneCount[(int)Mask.column3] += (j % 3) ^ 1;
+                            }
+                                break;
                             case Mask.flower:
                                 m[j, i] ^= i * j % 2 + i * j % 3 == 0;
                                 break;
@@ -734,7 +753,15 @@ namespace QR_code
                     }
 
             if (mask == Mask.Automat)
-                return Mask.flower;
+            {
+                // Choose the mask of which the amount of ones is closest to the amout of seros.
+                TotalCount /= 2;
+                int closest = 0;
+                for (int i = 1; i < 8; i++)
+                    if (Math.Abs(OneCount[i] - TotalCount) < Math.Abs(OneCount[closest] - TotalCount))
+                        closest = i;
+                return AddMask(version, ref m, (Mask)closest); // Add the mask that was choosen
+            }
             return mask;
         }
 
