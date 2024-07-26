@@ -42,6 +42,174 @@ namespace QR_code
             return matrix;
         }
 
+        // return the data orgenized in the matrix
+        // ** The return matrix doesn't include the Format Information **
+        private static bool[,] EncodeDataIntoMatrix(int version, BitsStream data)
+        {
+            int size = Matrix_size[version];
+            bool[,] matrix = new bool[size, size];
+            byte[] alignmentPos = Alignment_position[version];
+
+            // Alignment
+            for (int i = 0; i < alignmentPos.Length; i++)
+                for (int j = 0; j < alignmentPos.Length; j++)
+                {
+                    if (i == 0 && (j == 0 || j == alignmentPos.Length - 1) || j == 0 && i == alignmentPos.Length - 1)
+                        continue;
+                    DrawRect(ref matrix, alignmentPos[i] - 2, alignmentPos[j] - 2, 5, 5);
+                    matrix[alignmentPos[i], alignmentPos[j]] = true;
+                }
+
+            // Fixed Patterns
+            DrawRect(ref matrix, 0, 0, 7, 7);
+            DrawRect(ref matrix, 0, -7, 7, 7);
+            DrawRect(ref matrix, -7, 0, 7, 7);
+            FillRect(ref matrix, 2, 2, 3, 3);
+            FillRect(ref matrix, 2, -5, 3, 3);
+            FillRect(ref matrix, -5, 2, 3, 3);
+            for (int i = 8; i <= size - 9; i++)
+                matrix[i, 6] = i % 2 == 0;
+            for (int i = 8; i <= size - 9; i++)
+                matrix[6, i] = i % 2 == 0;
+            matrix[8, size - 8] = true;
+
+
+            // Encode the data to the matrix (with a respect to QR code)
+            int index = 0;
+            int Iy = size - 1, Ix = size - 1;
+            while (index < data.Count)
+            {
+                // up
+                while (Iy > 8 || (Iy >= 0 && 8 < Ix && Ix < size - 8))
+                {
+                    // Jump over the fixed patterns
+                    if (Iy == 6)
+                        Iy = 5;
+
+                    // Jump over version information, when [ version >= 7 ]
+                    if (version >= 7 && Iy == 5 && Ix == size - 9)
+                    {
+                        Iy = 0;
+                        Ix = size - 12;
+                        for (int i = 0; i < 6 && index < data.Count; i++)
+                            matrix[Ix, Iy++] = data[index++];
+
+                        Ix += 3; // Prepear for the next steps
+                        break;
+                    }
+
+                    // Deal with alignment
+                    if (!(Iy == 8 && Ix == size - 9) && !(Ix == 8 && Iy == size - 16) && alignmentPos.Any(b => b + 2 == Iy))
+                    {
+                        if (alignmentPos.Any(b => b - 1 <= Ix && Ix <= b + 3)) // Is the left side blocked?
+                        {
+                            if (alignmentPos.Any(b => b - 2 <= Ix && Ix <= b + 2)) // Is the right side blocked?
+                                Iy -= 5; // Jump over alignment patterns
+                            else
+                                // Fill 5 bits in the right side
+                                for (int i = 0; i < 5 && index < data.Count; i++)
+                                {
+                                    if (Iy == 6) // Jump over the fixed patterns
+                                    {
+                                        Iy = 5;
+                                        i++;
+                                    }
+                                    matrix[Ix, Iy--] = data[index++];
+                                }
+                        }
+                        else if (alignmentPos.Any(b => b - 2 <= Ix && Ix <= b + 2)) // Is the right side blocked?
+                            // Fill 5 bits in the left side
+                            for (int i = 0; i < 5 && index < data.Count; i++)
+                            {
+                                if (Iy == 6) // Jump over the fixed patterns
+                                {
+                                    Iy = 5;
+                                    i++;
+                                }
+                                matrix[Ix - 1, Iy--] = data[index++];
+                            }
+                    }
+                    matrix[Ix, Iy] = data[index];
+                    Ix--;
+                    if (++index >= data.Count)
+                        break;
+                    matrix[Ix, Iy] = data[index];
+                    Iy--;
+                    Ix++;
+                    if (++index >= data.Count)
+                        break;
+                }
+                // Prepear for the next steps
+                Ix -= 2;
+                Iy++;
+
+                // Jump over the fixed patterns
+                if (Ix == 6)
+                    Ix = 5;
+
+                // down
+                while (index < data.Count && (Iy < size - 8 || (Iy < size && Ix > 8)))
+                {
+                    // Jump over the fixed patterns
+                    if (Iy == 6)
+                        Iy = 7;
+
+                    // Jump over version information, when [ version >= 7 ]
+                    if (version >= 7 && Ix == 5 && Iy == size - 11)
+                        break;
+
+                    // Deal with alignment
+                    if (!(Ix == 5 && Iy == size - 9) && alignmentPos.Any(b => b - 2 == Iy))
+                    {
+                        if (alignmentPos.Any(b => b - 1 <= Ix && Ix <= b + 3)) // Is the left side blocked?
+                        {
+                            if (alignmentPos.Any(b => b - 2 <= Ix && Ix <= b + 2)) // Is the right side blocked?
+                                Iy += 5; // Jump over alignment patterns
+                            else
+                                // Fill 5 bits in the right side
+                                for (int i = 0; i < 5 && index < data.Count; i++)
+                                {
+                                    if (Iy == 6) // Jump over the fixed patterns
+                                    {
+                                        Iy = 7;
+                                        i++;
+                                    }
+                                    matrix[Ix, Iy++] = data[index++];
+                                }
+                        }
+                        else if (alignmentPos.Any(b => b - 2 <= Ix && Ix <= b + 2)) // Is the right side blocked?
+                            // Fill 5 bits in the left side
+                            for (int i = 0; i < 5 && index < data.Count; i++)
+                            {
+                                if (Iy == 6) // Jump over the fixed patterns
+                                {
+                                    Iy = 7;
+                                    i++;
+                                }
+                                matrix[Ix - 1, Iy++] = data[index++];
+                            }
+                    }
+
+                    matrix[Ix, Iy] = data[index];
+                    Ix--;
+                    if (++index >= data.Count)
+                        break;
+                    matrix[Ix, Iy] = data[index];
+                    Iy++;
+                    Ix++;
+                    if (++index >= data.Count)
+                        break;
+                }
+                // Prepear for the next steps
+                Ix -= 2;
+                Iy--;
+
+                if (Ix == 8) // Jump over the fixed patterns
+                    Iy = size - 9;
+            }
+
+            return matrix;
+        }
 
         private static byte[,] Number_of_blocks = {
            //0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 Errorcorrectionlevel
@@ -441,65 +609,6 @@ namespace QR_code
                 }
         }
 
-
-
-
-
-        private static List<byte> ReedSolomonComputeDivisor(int degree)
-        {
-            // start with the polynom ' x^0 '
-            List<byte> result = new List<byte>(degree);
-            for (int i = 0; i < degree - 1; i++)
-                result.Add(0);
-            result.Add(1);
-
-            byte root = 1;
-            for (int i = 0; i < degree; i++)
-            {
-                // Multiply the current product by (x - r^i)
-                for (int j = 0; j < degree; j++)
-                {
-                    result[j] = ReedSolomonMultiply(result[j], root);
-                    if (j != degree - 1)
-                        result[j] ^= result[j + 1];
-                }
-                root = ReedSolomonMultiply(root, 0x02);
-            }
-            return result;
-        }
-
-        private static byte ReedSolomonMultiply(byte x, byte y)
-        {
-            int z = 0;
-
-            for (int i = 7; i >= 0; i--)
-            {
-                z = (z << 1) ^ ((z >> 7) * 0x11D);
-                z ^= ((y >> i) & 1) * x;
-            }
-            return (byte)z;
-        }
-
-        private static List<byte> ReedSolomonAlgorithm(List<byte> data, List<byte> divisor)
-        {
-            LinkedList<byte> result = new LinkedList<byte>();
-            for (int i = 0; i < divisor.Count; i++)
-                result.AddLast(0);
-            foreach (byte b in data)
-            {
-                byte factor = (byte)(b ^ result.First());
-                result.RemoveFirst();
-                result.AddLast(0);
-                LinkedListNode<byte> resultNode = result.First;
-                for (int i = 0; i < divisor.Count; i++)
-                {
-                    resultNode.Value ^= ReedSolomonMultiply(divisor[i], factor);
-                    resultNode = resultNode.Next;
-                }
-            }
-            return new List<byte>(result);
-        }
-
         private static BitsStream AddDataErrorCorrection(BitsStream data, ECL ecl, int version)
         {
             int numberOfBlocks = Number_of_blocks[(int)ecl, version]; // How many blocks are there.
@@ -508,7 +617,7 @@ namespace QR_code
             int bytesInBlock = dataBytesInBlock + ECBytesInBlock; // How many bytes are there in a block (data + error-correction).
             int numberOfLongBlocks = Number_of_bits[version] / 8 % numberOfBlocks; // Sometimes the bytes of the QR aren't divided evenly into the blocks - in those cases there're some long blocks (blocks whose length is bigger of the others by 1), those blocks are the ones at end.
 
-            List<byte> RSdiv = ReedSolomonComputeDivisor(ECBytesInBlock);
+            List<byte> RSdiv = ErrorCorrectionAlgorithms.ReedSolomonComputeDivisor(ECBytesInBlock);
             List<byte>[] blocksData = new List<byte>[numberOfBlocks];
             List<byte>[] blocksEC = new List<byte>[numberOfBlocks];
             // Calculate the error-correction for each block
@@ -519,7 +628,7 @@ namespace QR_code
                 for (int j = 0; j < blocksData[i].Capacity; j++)
                     blocksData[i].Add(data.GetByte(dataIndex++));
 
-                blocksEC[i] = ReedSolomonAlgorithm(blocksData[i], RSdiv);
+                blocksEC[i] = ErrorCorrectionAlgorithms.ReedSolomonAlgorithm(blocksData[i], RSdiv);
             }
 
             //  Return the data + the error-corraction
@@ -538,249 +647,14 @@ namespace QR_code
             return res;
         }
 
-        // return the data orgenized in the matrix
-        // ** The return matrix doesn't include the Format Information **
-        private static bool[,] EncodeDataIntoMatrix(int version, BitsStream data)
+        public static int GetFormatErrorCorrection(int format)
         {
-            int size = Matrix_size[version];
-            bool[,] matrix = new bool[size, size];
-            byte[] alignmentPos = Alignment_position[version];
-
-            // Alignment
-            for (int i = 0; i < alignmentPos.Length; i++)
-                for (int j = 0; j < alignmentPos.Length; j++)
-                {
-                    if (i == 0 && (j == 0 || j == alignmentPos.Length - 1) || j == 0 && i == alignmentPos.Length - 1)
-                        continue;
-                    DrawRect(ref matrix, alignmentPos[i] - 2, alignmentPos[j] - 2, 5, 5);
-                    matrix[alignmentPos[i], alignmentPos[j]] = true;
-                }
-
-            // Fixed Patterns
-            DrawRect(ref matrix, 0, 0, 7, 7);
-            DrawRect(ref matrix, 0, -7, 7, 7);
-            DrawRect(ref matrix, -7, 0, 7, 7);
-            FillRect(ref matrix, 2, 2, 3, 3);
-            FillRect(ref matrix, 2, -5, 3, 3);
-            FillRect(ref matrix, -5, 2, 3, 3);
-            for (int i = 8; i <= size - 9; i++)
-                matrix[i, 6] = i % 2 == 0;
-            for (int i = 8; i <= size - 9; i++)
-                matrix[6, i] = i % 2 == 0;
-            matrix[8, size - 8] = true;
-
-
-            // Encode the data to the matrix (with a respect to QR code)
-            int index = 0;
-            int Iy = size - 1, Ix = size - 1;
-            while (index < data.Count)
-            {
-                // up
-                while (Iy > 8 || (Iy >= 0 && 8 < Ix && Ix < size - 8))
-                {
-                    // Jump over the fixed patterns
-                    if (Iy == 6)
-                        Iy = 5;
-
-                    // Jump over version information, when [ version >= 7 ]
-                    if (version >= 7 && Iy == 5 && Ix == size - 9)
-                    {
-                        Iy = 0;
-                        Ix = size - 12;
-                        for (int i = 0; i < 6 && index < data.Count; i++)
-                            matrix[Ix, Iy++] = data[index++];
-
-                        Ix += 3; // Prepear for the next steps
-                        break;
-                    }
-
-                    // Deal with alignment
-                    if (!(Iy == 8 && Ix == size - 9) && !(Ix == 8 && Iy == size - 16) && alignmentPos.Any(b => b + 2 == Iy))
-                    {
-                        if (alignmentPos.Any(b => b - 1 <= Ix && Ix <= b + 3)) // Is the left side blocked?
-                        {
-                            if (alignmentPos.Any(b => b - 2 <= Ix && Ix <= b + 2)) // Is the right side blocked?
-                                Iy -= 5; // Jump over alignment patterns
-                            else
-                                // Fill 5 bits in the right side
-                                for (int i = 0; i < 5 && index < data.Count; i++)
-                                {
-                                    if (Iy == 6) // Jump over the fixed patterns
-                                    {
-                                        Iy = 5;
-                                        i++;
-                                    }
-                                    matrix[Ix, Iy--] = data[index++];
-                                }
-                        }
-                        else if (alignmentPos.Any(b => b - 2 <= Ix && Ix <= b + 2)) // Is the right side blocked?
-                            // Fill 5 bits in the left side
-                            for (int i = 0; i < 5 && index < data.Count; i++)
-                            {
-                                if (Iy == 6) // Jump over the fixed patterns
-                                {
-                                    Iy = 5;
-                                    i++;
-                                }
-                                matrix[Ix - 1, Iy--] = data[index++];
-                            }
-                    }
-                    matrix[Ix, Iy] = data[index];
-                    Ix--;
-                    if (++index >= data.Count)
-                        break;
-                    matrix[Ix, Iy] = data[index];
-                    Iy--;
-                    Ix++;
-                    if (++index >= data.Count)
-                        break;
-                }
-                // Prepear for the next steps
-                Ix -= 2;
-                Iy++;
-
-                // Jump over the fixed patterns
-                if (Ix == 6)
-                    Ix = 5;
-
-                // down
-                while (index < data.Count && (Iy < size - 8 || (Iy < size && Ix > 8)))
-                {
-                    // Jump over the fixed patterns
-                    if (Iy == 6)
-                        Iy = 7;
-
-                    // Jump over version information, when [ version >= 7 ]
-                    if (version >= 7 && Ix == 5 && Iy == size - 11)
-                        break;
-
-                    // Deal with alignment
-                    if (!(Ix == 5 && Iy == size - 9) && alignmentPos.Any(b => b - 2 == Iy))
-                    {
-                        if (alignmentPos.Any(b => b - 1 <= Ix && Ix <= b + 3)) // Is the left side blocked?
-                        {
-                            if (alignmentPos.Any(b => b - 2 <= Ix && Ix <= b + 2)) // Is the right side blocked?
-                                Iy += 5; // Jump over alignment patterns
-                            else
-                                // Fill 5 bits in the right side
-                                for (int i = 0; i < 5 && index < data.Count; i++)
-                                {
-                                    if (Iy == 6) // Jump over the fixed patterns
-                                    {
-                                        Iy = 7;
-                                        i++;
-                                    }
-                                    matrix[Ix, Iy++] = data[index++];
-                                }
-                        }
-                        else if (alignmentPos.Any(b => b - 2 <= Ix && Ix <= b + 2)) // Is the right side blocked?
-                            // Fill 5 bits in the left side
-                            for (int i = 0; i < 5 && index < data.Count; i++)
-                            {
-                                if (Iy == 6) // Jump over the fixed patterns
-                                {
-                                    Iy = 7;
-                                    i++;
-                                }
-                                matrix[Ix - 1, Iy++] = data[index++];
-                            }
-                    }
-
-                    matrix[Ix, Iy] = data[index];
-                    Ix--;
-                    if (++index >= data.Count)
-                        break;
-                    matrix[Ix, Iy] = data[index];
-                    Iy++;
-                    Ix++;
-                    if (++index >= data.Count)
-                        break;
-                }
-                // Prepear for the next steps
-                Ix -= 2;
-                Iy--;
-
-                if (Ix == 8) // Jump over the fixed patterns
-                    Iy = size - 9;
-            }
-
-            return matrix;
-        }
-
-
-        /// <summary>
-        /// Calculate the (a,b)BCH code in respect to gx;
-        /// Notice: gx, max degree is 31 and 0 < a,b < 32
-        /// </summary>
-        private static int BCH(int gx, int data, int a)
-        {
-            int d_gx = 31;
-            for (; d_gx >= 0 && (gx >> d_gx & 1) == 0; d_gx--) ; // Find the maximum degree of gx
-
-            // Create px
-            data <<= d_gx;
-            int px = 0;
-            for (int i = 0; i < a; i++)
-                px |= (data >> i & 1) << i;
-
-            // Calculate rx [ rx = px % gx mod 2 ]
-            int rx = px;
-            while (true)
-            {
-                // find rx degree
-                int d_rx = a - 1;
-                for (; d_rx >= d_gx && (rx >> d_rx & 1) == 0; d_rx--) ; // Find the maximum degree of rx
-                if (d_rx < d_gx)
-                    break;
-
-                rx ^= gx << (d_rx - d_gx); // rx -= gx << d mod 2
-            }
-
-            // Return [ px - rx mod 2 ]
-            return px ^ rx;
-
-
-            //// The previous code - slow, the new one is faster.
-            //// Create px
-            //data <<= d_gx;
-            //List<int> px = new List<int>(a);
-            //for (int i = 0; i < a; i++)
-            //    px.Add((data >> i) & 1);
-
-            //// Calculate rx [ rx = px % gx ]
-            //List<int> rx = new List<int>(px);
-            //while (true)
-            //{
-            //    // find rx degree
-            //    int d_rx = a - 1;
-            //    for (; d_rx >= d_gx && rx[d_rx] == 0; d_rx--) ; // Find the maximum degree of rx
-            //    if (d_rx < d_gx)
-            //        break;
-
-            //    // rx -= factor * gx
-            //    int factor = rx[d_rx];
-            //    d_rx -= d_gx;
-            //    for (int i = 0; i <= d_gx; i++)
-            //        if ((gx >> i & 1) != 0)
-            //            rx[i + d_rx] -= factor;
-            //}
-
-            //// Copy [ px - rx ] to result (odd coefficient is 1, even is 0)
-            //int res = 0;
-            //for (int i = 14; i >= 0; i--)
-            //    res = res * 2 + ((px[i] - rx[i]) & 1);
-
-            //return res;
-        }
-
-        private static int GetFormatErrorCorrection(int format)
-        {
-            return BCH(0b10100110111, format, 15); // (15,5)BCH
+            return ErrorCorrectionAlgorithms.BCH(0b10100110111, format, 15); // (15,5)BCH
         }
 
         private static int GetVersionErrorCorrection(int version)
         {
-            return BCH(0b1111100100101, version, 18); // (18,6)BCH
+            return ErrorCorrectionAlgorithms.BCH(0b1111100100101, version, 18); // (18,6)BCH
         }
 
         private static void AddFormat(ref bool[,] m, Mask mask, ECL ecl)
